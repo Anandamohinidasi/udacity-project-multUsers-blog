@@ -21,8 +21,9 @@ class MainPage(Handler):
 	print self.alfabeto
 	for a in c:
 	    i = c.index(a)
-	    if a=="\n":
-		c[i] = "\n"
+	    if a=="\n" or a=="\r":
+		print "encontrei um enter "
+		# c[i] = "\n"
 		continue
 	    elif a==" ":
 		c[i] = " "
