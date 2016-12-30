@@ -1,0 +1,33 @@
+{% extends "main.html" %}
+{% block main %}
+	<form method="post" >
+	  <label>Name
+	     <input type="text" name="username" required value="{{data.username}}">
+		{% if data.usernameInvalid %}
+		 <span style="color: red;">Please Enter a Valid Username</span>
+		{% endif %}
+		{% if data.exists %}
+		 <span style="color: red;">Username already exists</span>
+		{% endif %}
+	  </label><br>
+	 <label>Password
+	     <input type="password" name="password" required>
+		{% if data.password == False %}
+		 <span style="color: red;">Please Enter a Valid password</span>
+		{% endif %}
+	  </label><br>
+	 <label>Verify Password
+	     <input type="password" name="verify" required>
+		{% if data.mismatch %}
+		 <span style="color: red;">Your password doesnt match</span>
+		{% endif %}
+	  </label><br>
+	 <label>Email
+	     <input type="email" name="email" value="{{data.email}}">
+	     {% if data.emailValid == 'invalid' %}
+		 <span style="color: red;">Please Enter a Valid email</span>
+	     {% endif %}
+	  </label>
+	  <button type="submit" >Send data</button>	
+	</form>
+{% endblock %}
