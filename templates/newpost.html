@@ -1,0 +1,18 @@
+{% extends "main.html" %}
+{% block main %}
+	<form method="post" >
+	  <label>Title
+	     <input type="text" name="title" required value="">
+		{% if title %}
+		 <span style="color: red;">Title cannot be empty</span>
+		{% endif %}		
+	  </label><br>
+	 <label>Your Post
+		<textarea name="postarea" ></textarea>	
+		{% if title %}
+		 <span style="color: red;">Post cannot be empty</span>
+		{% endif %}
+	</label>
+	  <button type="submit" >Send data</button>	
+	</form>
+{% endblock %}

@@ -3,6 +3,8 @@ import jinja2
 import webapp2
 import string
 import hmac
+import random
+import operator 
 from google.appengine.ext import db
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
@@ -19,15 +21,52 @@ class MainHandler(webapp2.RequestHandler):
 	return t.render(params)
     def render(self, template, **kw):
 	self.write(self.render_str(template, **kw))
+	
+    # generate an random salt 
+    def generate_salt(self):
+	return ''.join(random.choice(string.lowercase) for a in xrange(5))
+
+    # method for password hash
+    def hash_pass(self,password, salt = None):
+	if not salt:  # this allows has_pass to be used for verification also
+		salt = self.generate_salt()  # if no salt gived, generate a new salt
+	return "%s|%s" % (salt, hmac.new('haribol', password+salt).hexdigest())
+
+    #method to check if user is already logged in
+    def check(self):
+	cookie = self.request.cookies.get('user_id')
+	if cookie:
+		if cookie == self.hash_id(cookie.split('|')[0]):
+			return cookie
+		return None
+		"""
+		list_users =[]  # we know its not the better way, rather make it better before sumbmitting
+		users = Users.all()
+		for a in users:
+			list_users.append(a.key().id())
+		print 'usuarios ids: %s' % list_users	
+		if  str(cookie.split('|')[0]) in str(list_users):
+			return cookie
+		"""
+	else:
+		return None
+
+    # method to hash user id before sending it to cookie
+    def hash_id(self, user_id):
+	return '%s|%s' % (str(user_id), hmac.new('haribol', str(user_id)).hexdigest())
 
     # method to set a cookie 
     def set_cookie(self, name, value):
-	self.response.headers.add_header('Set-Cookie', '%s=%s; Path=/' % (name,value))
+	if value:
+		value = self.hash_id(value)
+		self.response.headers.add_header('Set-Cookie', '%s=%s; Path=/' % (name,value))
+	else:
+	  	self.response.headers.add_header('Set-Cookie', '%s=%s; Path=/' % (name,value))  # if no value means cookie should be empty, i.e logout function	
     
     # method to register the user 
     def register(self, name, password):
 	pass
-   
+
     # method to login user 
     def login(self, name, password):
 	self.redirect('/welcome')
@@ -40,10 +79,18 @@ class MainHandler(webapp2.RequestHandler):
     # method to make user post 
     def post(self, id, post):
 	pass
+	
+    # method to check if the user triyng to edit the post
+    # is the same user who once created it
+    def check_user(self,creator_id):
+	if creator_id == self.check().split('|')[0]:
+		return True
+	return False
+	
 
 # Post class is a new identitie at Google App Engine Datastore
 class Post(db.Model):
-    subject = db.StringProperty(required = True)
+    title = db.StringProperty(required = True)
     content = db.TextProperty(required = True)
     created = db.DateTimeProperty(auto_now_add = True)
     creator = db.StringProperty(required = True)
@@ -59,15 +106,31 @@ class Users(db.Model):
 # main class for path '/'   
 class MainPage(MainHandler):    	
     def get(self):
-	self.render("blog.html") # any html
+	if self.check():	
+		posts = Post.all().order('-created')
+		if self.request.get('like'):
+			likes = self.request.get('like')
+			post_id = self.request.get('post_id')
+			updated_post = Post.get(unicode(post_id)) # ISSUE HEREs
+			likes = likes + '1'
+			updated_post.likes = likes
+			updated_post.put()
+			print likes 
+		if self.request.get('comment'):
+			text = self.request.get('comment')
+		self.render("blog.html", posts = posts) 
+	else:
+		self.redirect('/signup')
 
     def post(self):
 	pass
 
 # resgistration class for path /signup
 class RegisterHandler(MainHandler):
+
     def get(self):
 	self.render('register.html', data={})
+
     def post(self):
 	mismatch = False # mistach is True if the two passwords arent equals
 	username = self.request.get('username')
@@ -79,14 +142,13 @@ class RegisterHandler(MainHandler):
 	# check if user already in db (means, user already exists)
 	v = Users.all().filter('name =', username)	
 	if v.get():
-		print 'tem'
 		exists = True
 	# if user does not exist, verify inputs for validation
 	else:
 		if (email):	
 			# compile to check regular expression pattern
 			p = re.compile('^[\S]+@[\S]+.[\S]+$')
-			email = p.match(email) # check if email matchs the pattern, if no retur None to email var
+			email = p.match(email) # check if email matchs the pattern, if no retunr None to email var
 			if email:
 				email = True
 			else:
@@ -114,12 +176,10 @@ class RegisterHandler(MainHandler):
 	else:	
 		username = str(self.request.get("username"))
 		password =  str(self.request.get("password"))
-		password = '%s|%s' % (password, hmac.new('haribol', password).hexdigest())
+		password = self.hash_pass(password)
 		usuario = Users(name = username, password = password)
 		usuario = usuario.put()
-		user_id = usuario.id()
-		user_id = '%s|%s' % (str(user_id), hmac.new('haribol', str(user_id)).hexdigest())
-		self.response.headers.add_header('Set-Cookie', 'user_id=%s, path=/' % user_id)
+		self.set_cookie('user_id', usuario.id())
 		self.redirect('/')
 
 
@@ -131,15 +191,13 @@ class LoginHandler(MainHandler):
 	def post(self):
 			username = self.request.get('username')
 			password = self.request.get('password')
-			print Users.all().get()
 			v = Users.all().filter('name =', username)
-			a = Users.all().filter('password =', '%s|%s' % (password,hmac.new('haribol', password).hexdigest()))
-			if v.get() and a.get():
-				print 'analisou e aprovou, o username eh: %s e a senha eh: %s' % (username,password)
-				# users = db.GqlQuery("SELECT * FROM Users where name = %s" % username) 			
+			if v.get():
+				db_pass = v.get().password
+			
+			if v.get() and (db_pass == self.hash_pass(password,db_pass.split('|')[0])):
 				user_id = v.get().key().id()
-				user_id = '%s|%s' % (str(user_id), hmac.new('haribol', str(user_id)).hexdigest())			
-				self.response.headers.add_header('Set-Cookie', 'user_id=%s, path=/' % user_id)
+				self.set_cookie('user_id', user_id)
 				self.redirect('/')
 			else:		
 				print 'analisou e nao aprovou'
@@ -148,10 +206,55 @@ class LoginHandler(MainHandler):
 
 # logout class to logout user /logout
 class LogoutHandler(MainHandler):
-	pass 
+	def get(self):
+		self.logout() 
+
+# class to create a new post /newpost
+class NewPostHandler(MainHandler):
+	def get(self):
+		if self.check():
+			self.render('newpost.html')
+		else:
+			self.redirect('/signup')
+	def post(self):
+		title = self.request.get('title')
+		postdata = self.request.get('postarea')
+		user_id = self.check().split('|')[0]
+		post = Post(title = title, content = postdata, creator = user_id)
+		post.put()
+		self.redirect('/')
+		self.redirect('/')
+
+# class to edit post
+class EditPost(MainHandler):
+	def get(self):
+		if self.check():
+			creator_id = self.request.get('creator_id')
+			post_id = self.request.get('post_id')
+			post_title = self.request.get('title')
+			post_content = self.request.get('content')
+			data = { 'creator': creator_id, 'id': post_id, 'title': post_title, 'content': post_content}
+			if self.check_user(creator_id):
+				self.render('editpost.html', data = data)
+			else:
+				self.redirect('/')
+		else:
+			self.redirect('/signup')
+	def post(self):
+		title = self.request.get('title')
+		postdata = self.request.get('postarea')
+		user_id = self.check().split('|')[0]
+		post_id = self.request.get('id')
+		post_key = db.Key.from_path('Post', int(post_id))  # used to retrieve an key for the entity
+		post = db.get(post_key)  # from the key, get the entity
+		post.title = title
+		post.content = postdata
+		post.creator = user_id
+		post.put()
+		self.redirect('/')		 
 
 app = webapp2.WSGIApplication([
-    ('/', MainPage), ('/signup', RegisterHandler), ('/login', LoginHandler), ('/logout', LogoutHandler)
+    ('/', MainPage), ('/signup', RegisterHandler), ('/login', LoginHandler), ('/logout', LogoutHandler), ('/newpost', NewPostHandler), ('/edit', EditPost)
 ], debug=True)
 
 

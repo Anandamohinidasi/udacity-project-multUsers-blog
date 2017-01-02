@@ -1,4 +1,12 @@
 {% extends "main.html" %}
 {% block main %}
-	posts
+	{% for post in posts %}
+	<strong>id: </strong>{{post.key().id()}}
+	 <strong>Autor: </strong>{{post.creator}}
+	 <a href="http://localhost:8080/edit?creator_id={{post.creator}}&post_id={{post.key().id()}}&title={{post.title}}&content={{post.content}}">EDIT</a>
+	 <h1>{{post.title}}</h1>
+	 <pre>{{post.content}}</pre>
+         <strong>{{post.likes}}</strong><a href="http://localhost:8080/?post_id={{post.key().id()}}&like={{post.likes}}">LIKE</a>
+	 <strong>{{post.comments}}</strong><a href="http://localhost:8080/?post_id={{post.key()}}&comment=True">COMMENT</a><br>
+	{% endfor %}
 {% endblock %}
