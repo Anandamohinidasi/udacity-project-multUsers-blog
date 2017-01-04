@@ -1,12 +1,74 @@
 {% extends "main.html" %}
 {% block main %}
-	{% for post in posts %}
+	{% for post in data.posts %}
 	<strong>id: </strong>{{post.key().id()}}
-	 <strong>Autor: </strong>{{post.creator}}
+	 <strong id='a'>Autor: </strong>{{post.creator}}
 	 <a href="http://localhost:8080/edit?creator_id={{post.creator}}&post_id={{post.key().id()}}&title={{post.title}}&content={{post.content}}">EDIT</a>
 	 <h1>{{post.title}}</h1>
 	 <pre>{{post.content}}</pre>
-         <strong>{{post.likes}}</strong><a href="http://localhost:8080/?post_id={{post.key().id()}}&like={{post.likes}}">LIKE</a>
-	 <strong>{{post.comments}}</strong><a href="http://localhost:8080/?post_id={{post.key()}}&comment=True">COMMENT</a><br>
+         <strong>{{post.likes}}</strong><a href="http://localhost:8080/?post_id={{post.key().id()}}&like=True">LIKE</a>
+	 <a data-toggle="modal" data-target="#myModal" data-button="{{post.key().id()}}">COMMENT</a><br>
+{% for comment in data.comments%}
+	{% if comment.post  == post.key().id() %}
+		<strong>{{comment.post}}</strong><br>
+		{{comment.content}}
+		<br>
+	{% endif %}
+{% endfor %}
 	{% endfor %}
+
+
+<!-- Modal for comment -->
+<div id="myModal" class="modal fade" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Write your comment</h4>
+      </div>
+      <div class="modal-body">
+        <label><textarea id="content" placeholder="Your comment goes here..."></textarea></label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="saveComment">Save comment</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+<script>
+ $(document).ready(function(){
+	$('.modal').on('show.bs.modal', function(e){  
+		var $trigger = $(e.relatedTarget);  /* relatedTarget event was based on a Stack Overflow question that follows:
+							* http://stackoverflow.com/questions/28335143/determine-which-button-opened-a-bootstrap-3-modal
+						    */
+		console.log($trigger.data('button'));
+		$('#saveComment').click(function(){
+			var content = $('#content').val();
+			console.log(content);
+			// $.ajax to send data to server
+		        $.ajax({
+				url: '/comment',
+				type: 'POST',
+				dataType: 'json',
+				data: JSON.stringify({'post_id': $trigger.data('button'),
+					'content': content
+					}),
+				success: function(response){
+					console.log(response);				
+				},
+				error: function(error){
+					console.log(error)				
+				}
+			}); 
+			// end of $.ajax post 
+			$('#myModal').modal('hide');
+		});	
+	});
+	$('.modal').on('hidden.bs.modal', function() {
+	    $('#content').val('')
+	});
+ 	
+ }); 
+</script>
 {% endblock %}

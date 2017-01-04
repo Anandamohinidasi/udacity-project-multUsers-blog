@@ -5,6 +5,8 @@ import string
 import hmac
 import random
 import operator 
+import time
+import json
 from google.appengine.ext import db
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
@@ -39,15 +41,6 @@ class MainHandler(webapp2.RequestHandler):
 		if cookie == self.hash_id(cookie.split('|')[0]):
 			return cookie
 		return None
-		"""
-		list_users =[]  # we know its not the better way, rather make it better before sumbmitting
-		users = Users.all()
-		for a in users:
-			list_users.append(a.key().id())
-		print 'usuarios ids: %s' % list_users	
-		if  str(cookie.split('|')[0]) in str(list_users):
-			return cookie
-		"""
 	else:
 		return None
 
@@ -87,38 +80,61 @@ class MainHandler(webapp2.RequestHandler):
 		return True
 	return False
 	
-
 # Post class is a new identitie at Google App Engine Datastore
 class Post(db.Model):
     title = db.StringProperty(required = True)
     content = db.TextProperty(required = True)
     created = db.DateTimeProperty(auto_now_add = True)
     creator = db.StringProperty(required = True)
-    likes = db.StringProperty()
-    comments = db.TextProperty()	
+    likes = db.IntegerProperty(default=0)
+    comments = db.ListProperty(item_type= str)	
 
 # Post class is a new identitie at Google App Engine Datastore
 class Users(db.Model):
     name = db.StringProperty(required = True)
     password = db.StringProperty(required = True)
     email = db.EmailProperty()	
-	
+
+# Comments class, where comments are stored
+class Comments(db.Model):
+	creator = db.StringProperty(required=True)
+	content = db.TextProperty(required = True)
+	post_id = db.StringProperty(required = True)  
+	created = db.DateTimeProperty(auto_now_add = True)	
+
 # main class for path '/'   
 class MainPage(MainHandler):    	
     def get(self):
-	if self.check():	
-		posts = Post.all().order('-created')
+	check = self.check()
+	if check:	
 		if self.request.get('like'):
-			likes = self.request.get('like')
 			post_id = self.request.get('post_id')
-			updated_post = Post.get(unicode(post_id)) # ISSUE HEREs
-			likes = likes + '1'
-			updated_post.likes = likes
-			updated_post.put()
-			print likes 
-		if self.request.get('comment'):
-			text = self.request.get('comment')
-		self.render("blog.html", posts = posts) 
+			post_key = db.Key.from_path('Post', int(post_id))  # used to retrieve an key for the entity
+			post = db.get(post_key)
+			print 'foi check eh: %s \n e o creator foi %s' % (check, post.creator) 
+			if not self.check_user(post.creator):			
+				if post.likes:
+					post.likes = post.likes + 1
+				else:
+					post.likes = 1
+				post.put()
+				time.sleep(0.1)
+				self.redirect('/')
+			else:
+				self.redirect('/')
+		posts = Post.all().order('-created')
+		comments = Comments.all().order('-created')
+		comment_list = []
+		for a in posts:
+			for b in a.comments:
+				for x in comments:
+					print b
+					print x.key().id()
+					if str(b) == str(x.key().id()):
+						comment_list.append({'post': a.key().id(), 'creator': x.creator,'content':x.content})
+		print comment_list
+				
+		self.render("blog.html", data = {'posts': posts, 'comments': comment_list }) 
 	else:
 		self.redirect('/signup')
 
@@ -180,6 +196,7 @@ class RegisterHandler(MainHandler):
 		usuario = Users(name = username, password = password)
 		usuario = usuario.put()
 		self.set_cookie('user_id', usuario.id())
+		time.sleep(0.1)
 		self.redirect('/')
 
 
@@ -222,7 +239,7 @@ class NewPostHandler(MainHandler):
 		user_id = self.check().split('|')[0]
 		post = Post(title = title, content = postdata, creator = user_id)
 		post.put()
-		self.redirect('/')
+		time.sleep(0.1)
 		self.redirect('/')
 
 # class to edit post
@@ -251,10 +268,29 @@ class EditPost(MainHandler):
 		post.content = postdata
 		post.creator = user_id
 		post.put()
+		time.sleep(0.1)
 		self.redirect('/')		 
+# class comment, is the /comment endpoint that handlers $.ajax data with new comment
+class CommentHandler(MainHandler):
+	def post(self):
+		data = json.loads(self.request.body)
+		user_id = self.check().split('|')[0]
+		comment = data['content']
+		post_id = data['post_id']
+		new_comment = Comments(creator = str(user_id), content = comment, post_id= str(post_id))
+		comment_key = new_comment.put()
+		comment_id = comment_key.id()
 
+		# put comment id into comments list on Post entity
+		post_key = db.Key.from_path('Post', int(post_id))
+		new_comment = db.get(post_key)
+		new_comment.comments.append(str(comment_id))
+		new_comment.put()
+		# finihs of putting comments id into comments list on Post object
+		self.response.write('Haribol, deu certo')
+  
 app = webapp2.WSGIApplication([
-    ('/', MainPage), ('/signup', RegisterHandler), ('/login', LoginHandler), ('/logout', LogoutHandler), ('/newpost', NewPostHandler), ('/edit', EditPost)
+    ('/', MainPage), ('/signup', RegisterHandler), ('/login', LoginHandler), ('/logout', LogoutHandler), ('/newpost', NewPostHandler), ('/edit', EditPost), ('/comment', CommentHandler)
 ], debug=True)
 
 
