@@ -284,7 +284,7 @@ class CommentHandler(MainHandler):
 		# put comment id into comments list on Post entity
 		post_key = db.Key.from_path('Post', int(post_id))
 		new_comment = db.get(post_key)
-		new_comment.comments.append(str(comment_id))
+		new_comment.comments.insert(0, str(comment_id))
 		new_comment.put()
 		# finihs of putting comments id into comments list on Post object
 		self.response.write('Haribol, deu certo')

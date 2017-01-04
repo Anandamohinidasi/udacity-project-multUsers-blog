@@ -55,10 +55,13 @@
 					'content': content
 					}),
 				success: function(response){
-					console.log(response);				
+	 setTimeout("location.reload(true);", 500);
+					window.location.href = '/'
+					console.log(response.responseText);				
 				},
 				error: function(error){
-					console.log(error)				
+					setTimeout("location.reload(true);", 500); // verify why its going to error, even though the operation were sucessfull
+					console.log(error.responseText)				
 				}
 			}); 
 			// end of $.ajax post 
