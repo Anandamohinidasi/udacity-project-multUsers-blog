@@ -1,18 +1,6 @@
 {% extends "main.html" %}
 {% block main %}
 <form method="post">
-	<label> Username
-	<input type="text" name="username">
-	</label><br>
-	<label> Password
-	<input type="password" name="password">
-	</label>
-	{% if invalid %}
-	 <span style="color: red;">INVALID LOGIN</span>
-	{% endif %}
-	<button type="submit">Log In</button>
-<form>
-<form method="post">
   <div class="form-group">
     <label for="exampleInputEmail1">Username</label>
     <input type="text" name="username" class="form-control" id="exampleInputEmail1" placeholder="Your Username here">
@@ -22,11 +10,9 @@
     <input type="password" name="password" class="form-control" id="exampleInputEmail1" placeholder="Your Password here">
   </div>
   {% if invalid %}
-	 <p><span style="color: red;">INVALID LOGIN</span></p>
+	 <p><span class="error">INVALID LOGIN</span></p>
   {% endif %}
   <button type="submit" class="btn btn-default">Log In</button>
 </form>
-
-
 {% endblock %}
 

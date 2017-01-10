@@ -140,9 +140,6 @@ class MainPage(MainHandler):
 	else:
 		self.redirect('/signup')
 
-    def post(self):
-	pass
-
 # resgistration class for path /signup
 class RegisterHandler(MainHandler):
 
@@ -201,7 +198,6 @@ class RegisterHandler(MainHandler):
 		self.set_cookie('username', username)
 		time.sleep(0.1)
 		self.redirect('/')
-
 
 # login class for /login   
 class LoginHandler(MainHandler):
@@ -272,18 +268,18 @@ class EditPost(MainHandler):
 		post.content = postdata
 		post.creator = user_id
 		post.put()
-		self.response.write('edited sucessfully')		 
+		self.response.write('edited sucessfully')	
+	 
 # class comment, is the /comment endpoint that handlers $.ajax data with new comment
 class CommentHandler(MainHandler):
 	def post(self):
 		data = json.loads(self.request.body)
-		user_id = self.check()
+		user_id = self.check()[1]
 		comment = data['content']
 		post_id = data['post_id']
 		new_comment = Comments(creator = str(user_id), content = comment, post_id= str(post_id))
 		comment_key = new_comment.put()
 		comment_id = comment_key.id()
-
 		# put comment id into comments list on Post entity
 		post_key = db.Key.from_path('Post', int(post_id))
 		new_comment = db.get(post_key)
@@ -295,5 +291,4 @@ class CommentHandler(MainHandler):
 app = webapp2.WSGIApplication([
     ('/', MainPage), ('/signup', RegisterHandler), ('/login', LoginHandler), ('/logout', LogoutHandler), ('/newpost', NewPostHandler), ('/edit', EditPost), ('/comment', CommentHandler)
 ], debug=True)
-
 

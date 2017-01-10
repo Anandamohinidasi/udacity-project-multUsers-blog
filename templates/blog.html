@@ -11,14 +11,16 @@
 	     <div class="post-background">
 		<strong id='a'>Autor: </strong>{{post.creator[1]}}
 		 <a class="edit-pos" data-id="{{post.key().id()}}" data-creator="{{post.creator[1]}}" data-user="{{data.username}}" data-title="{{post.title}}"  data-content="{{post.content}}">  <span class="glyphicon glyphicon-pencil"></span> EDIT</a>
+		 <p><span id="{{post.key().id()}}" class="error">You cant edit a post that's not yours</span></p>
 		 <h1 id="post-title" >{{post.title}}</h1>
 		 <pre class="small-margin post-content" >{{post.content}}</pre>
 		 <div class="small-margin"><strong>{{post.likes}}</strong><a href="/?post_id={{post.key().id()}}&like=True"> <span class="glyphicon glyphicon-thumbs-up"></span> LIKE</a>
 		 <a class="make-a-comment" data-id="{{post.key().id()}}" data-creator="{{post.creator[1]}}" data-user="{{data.username}}"> <span class="glyphicon glyphicon-comment"></span> COMMENT</a><br></div>
+		<p><span id="{{post.key().id(),post.creator[1]}}" class="error">You can't comment you own post</span></p>
 		<div class="small-margin post-comment">
 		{% for comment in data.comments%}
 			{% if comment.post  == post.key().id() %}
-				<div id="comment-header"><h4>{{comment.creator}}</h4></div>
+				<div class="comment-header"><h4>{{comment.creator}}</h4></div>
 				<pre>{{comment.content}}</pre>
 			{% endif %}
 		{% endfor %}
@@ -99,8 +101,10 @@
 </div><!-- /.modal -->
 <!-- END OF MODAL TEMPLATES -->
 
+<!-- JS Scripts -->
 <script>
  $(document).ready(function(){
+	$('.error').hide() //  assumes you have no error before triyng something
 	$('.modal').on('show.bs.modal', function(e){  
 		$('#savePost').click(function(){
 			var content = $('#post-content').val();
@@ -176,6 +180,8 @@
 		 }
 		else{
 			console.log('this post is not yours, jerk!')
+			id = "#"+id;
+			$(id).show();
 		};
 	   });
 
@@ -214,7 +220,13 @@
 						// end of $.ajax post 
 						$('#commentModal').modal('hide');				
 	     		});
-	      };	
+	      }
+	      else{
+		 console.log('dont comment u own post!')
+		 id = "#"+id+","+creator;
+		 $(id).show();
+		 
+	      };		
 	}); 
 	/* End of update post functios
 	*/	
