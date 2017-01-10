@@ -7,6 +7,7 @@ import random
 import operator 
 import time
 import json
+import re
 from google.appengine.ext import db
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
@@ -36,10 +37,11 @@ class MainHandler(webapp2.RequestHandler):
 
     #method to check if user is already logged in
     def check(self):
-	cookie = self.request.cookies.get('user_id')
-	if cookie:
-		if cookie == self.hash_id(cookie.split('|')[0]):
-			return cookie
+	cookie_user_id = self.request.cookies.get('user_id')
+	cookie_username = self.request.cookies.get('username')
+	if cookie_user_id and cookie_username:
+		if cookie_user_id == self.hash_id(cookie_user_id.split('|')[0]) and cookie_username == self.hash_id(cookie_username.split('|')[0]):
+			return [cookie_user_id.split('|')[0] , cookie_username.split('|')[0] ]
 		return None
 	else:
 		return None
@@ -76,7 +78,9 @@ class MainHandler(webapp2.RequestHandler):
     # method to check if the user triyng to edit the post
     # is the same user who once created it
     def check_user(self,creator_id):
-	if creator_id == self.check().split('|')[0]:
+	ida = creator_id
+  	oda = self.check()
+	if str(ida) == str(oda):
 		return True
 	return False
 	
@@ -85,7 +89,7 @@ class Post(db.Model):
     title = db.StringProperty(required = True)
     content = db.TextProperty(required = True)
     created = db.DateTimeProperty(auto_now_add = True)
-    creator = db.StringProperty(required = True)
+    creator = db.ListProperty(item_type=str, required = True)
     likes = db.IntegerProperty(default=0)
     comments = db.ListProperty(item_type= str)	
 
@@ -107,11 +111,11 @@ class MainPage(MainHandler):
     def get(self):
 	check = self.check()
 	if check:	
-		if self.request.get('like'):
+		if self.request.get('like'):  # RESOLVER ISTO
 			post_id = self.request.get('post_id')
 			post_key = db.Key.from_path('Post', int(post_id))  # used to retrieve an key for the entity
 			post = db.get(post_key)
-			print 'foi check eh: %s \n e o creator foi %s' % (check, post.creator) 
+			#  print 'foi check eh: %s \n e o creator foi %s' % (check, post.creator) 
 			if not self.check_user(post.creator):			
 				if post.likes:
 					post.likes = post.likes + 1
@@ -122,19 +126,17 @@ class MainPage(MainHandler):
 				self.redirect('/')
 			else:
 				self.redirect('/')
+		username = check[1]
 		posts = Post.all().order('-created')
 		comments = Comments.all().order('-created')
 		comment_list = []
 		for a in posts:
 			for b in a.comments:
 				for x in comments:
-					print b
-					print x.key().id()
 					if str(b) == str(x.key().id()):
-						comment_list.append({'post': a.key().id(), 'creator': x.creator,'content':x.content})
-		print comment_list
+						comment_list.append({'post': a.key().id(), 'creator': x.creator,'content':x.content })		
 				
-		self.render("blog.html", data = {'posts': posts, 'comments': comment_list }) 
+		self.render("blog.html", data = {'posts': posts, 'comments': comment_list , 'username': username}) 
 	else:
 		self.redirect('/signup')
 
@@ -196,6 +198,7 @@ class RegisterHandler(MainHandler):
 		usuario = Users(name = username, password = password)
 		usuario = usuario.put()
 		self.set_cookie('user_id', usuario.id())
+		self.set_cookie('username', username)
 		time.sleep(0.1)
 		self.redirect('/')
 
@@ -215,9 +218,9 @@ class LoginHandler(MainHandler):
 			if v.get() and (db_pass == self.hash_pass(password,db_pass.split('|')[0])):
 				user_id = v.get().key().id()
 				self.set_cookie('user_id', user_id)
+				self.set_cookie('username', username)
 				self.redirect('/')
 			else:		
-				print 'analisou e nao aprovou'
 				self.render('login.html', invalid = True)	 
 
 
@@ -234,15 +237,15 @@ class NewPostHandler(MainHandler):
 		else:
 			self.redirect('/signup')
 	def post(self):
-		title = self.request.get('title')
-		postdata = self.request.get('postarea')
-		user_id = self.check().split('|')[0]
+		data = json.loads(self.request.body)
+		title = data['title']
+		postdata = data['content']
+		user_id = self.check()
 		post = Post(title = title, content = postdata, creator = user_id)
 		post.put()
-		time.sleep(0.1)
-		self.redirect('/')
+		self.response.write('haribol, postou')
 
-# class to edit post
+# class to edit post /edit
 class EditPost(MainHandler):
 	def get(self):
 		if self.check():
@@ -258,23 +261,23 @@ class EditPost(MainHandler):
 		else:
 			self.redirect('/signup')
 	def post(self):
-		title = self.request.get('title')
-		postdata = self.request.get('postarea')
-		user_id = self.check().split('|')[0]
-		post_id = self.request.get('id')
+		data = json.loads(self.request.body)
+		title = data['title']
+		postdata = data['content']
+		user_id = self.check()
+		post_id = data['post_id']
 		post_key = db.Key.from_path('Post', int(post_id))  # used to retrieve an key for the entity
 		post = db.get(post_key)  # from the key, get the entity
 		post.title = title
 		post.content = postdata
 		post.creator = user_id
 		post.put()
-		time.sleep(0.1)
-		self.redirect('/')		 
+		self.response.write('edited sucessfully')		 
 # class comment, is the /comment endpoint that handlers $.ajax data with new comment
 class CommentHandler(MainHandler):
 	def post(self):
 		data = json.loads(self.request.body)
-		user_id = self.check().split('|')[0]
+		user_id = self.check()
 		comment = data['content']
 		post_id = data['post_id']
 		new_comment = Comments(creator = str(user_id), content = comment, post_id= str(post_id))

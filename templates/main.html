@@ -10,11 +10,17 @@
    <script src="https://code.jquery.com/jquery-3.1.1.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
    <!-- Latest compiled and minified JavaScript -->
    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+<style>
+
+</style>
 </head>
-<body>
-<header>
-	<h1>Blog Haribol</h1>
-	<hr>
+<body class="container-fluid">
+<header class="navbar">
+	<nav id="nav" role="navigation" class="navbar navbar-default">
+	   <h1>Blog Haribol</h1>
+	   {% block header%}
+	   {% endblock %}	
+	</nav>
 </header>
 {% block main %}
 {% endblock %}

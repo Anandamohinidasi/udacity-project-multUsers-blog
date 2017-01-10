@@ -1,22 +1,107 @@
 {% extends "main.html" %}
+{% block header %}
+	<p>What are you waiting for? </p>
+	<button data-toggle="modal" data-target="#newPostModal" class="btn btn-default btn-lg">Make a New Post</button>
+	<span class="log-position">You are Logged as <strong id="username">{{data.username}}</strong></span>
+	<a href="/logout" class="logout">Log Out <span class="glyphicon glyphicon-share-alt"></span></a>
+{% endblock %}
 {% block main %}
+
 	{% for post in data.posts %}
-	<strong>id: </strong>{{post.key().id()}}
-	 <strong id='a'>Autor: </strong>{{post.creator}}
-	 <a href="http://localhost:8080/edit?creator_id={{post.creator}}&post_id={{post.key().id()}}&title={{post.title}}&content={{post.content}}">EDIT</a>
-	 <h1>{{post.title}}</h1>
-	 <pre>{{post.content}}</pre>
-         <strong>{{post.likes}}</strong><a href="http://localhost:8080/?post_id={{post.key().id()}}&like=True">LIKE</a>
-	 <a data-toggle="modal" data-target="#myModal" data-button="{{post.key().id()}}">COMMENT</a><br>
+<!-- href="http://localhost:8080/edit?creator_id={{post.creator}}&post_id={{post.key().id()}}&title={{post.title}}&content={{post.content}}" -->
+     <div class="post-background">
+	<strong id='a'>Autor: </strong>{{post.creator[1]}}
+	 <a class="edit-pos" data-id="{{post.key().id()}}" data-creator="{{post.creator[1]}}" data-user="{{data.username}}" data-title="{{post.title}}"  data-content="{{post.content}}">  <span class="glyphicon glyphicon-pencil"></span> EDIT</a>
+	 <h1 id="post-title" >{{post.title}}</h1>
+	 <pre class="small-margin post-content" >{{post.content}}</pre>
+         <div class="small-margin"><strong>{{post.likes}}</strong><a href="http://localhost:8080/?post_id={{post.key().id()}}&like=True"> <span class="glyphicon glyphicon-thumbs-up"></span> LIKE</a>
+	 <a class="make-a-comment" data-id="{{post.key().id()}}" data-detail="{{post.creator[1], data.username}}"> <span class="glyphicon glyphicon-comment"></span> COMMENT</a><br></div>
+<div class="small-margin post-comment">
 {% for comment in data.comments%}
 	{% if comment.post  == post.key().id() %}
-		<strong>{{comment.post}}</strong><br>
-		{{comment.content}}
-		<br>
+		<div id="comment-header"><h4>{{comment.creator}}</h4></div>
+		<pre>{{comment.content}}</pre>
 	{% endif %}
 {% endfor %}
+</div>
+     </div>
 	{% endfor %}
+<style>
+ body {
+   background-color: #E7EAFB;
+ }
+ .navbar {
+	margin-left: -12pt;
+	margin-right: -12pt;
+ }
 
+ #nav {
+	width: 100%;
+	float: left;
+	margin: 0 0 1em 0;
+	padding: 3%;
+	background-color: #f2f2f2;
+	border-bottom: 1px solid #ccc; 
+	text-align: center; 
+ }
+
+ .log-position {
+	position: absolute;
+	top: 15pt;;
+	right: 15pt;
+ }
+
+ .logout {
+	position: absolute;
+	top: 30pt;;
+	right: 15pt;
+ }
+
+ .small-margin {
+	margin: 1%;
+ }
+ .post-background {
+ 	max-width: 100%;
+	width: 50%;
+	margin-left: auto;
+	margin-right: auto;
+	background-color: rgb(255,255,255);
+	border-radius: 5pt;
+	box-shadow: 1px 1px 1px 1px rgba(0,0,0,0.2);
+	
+ }
+
+ #post-title {
+	text-align: center;
+	text-transform: uppercase;
+	size: 10%; 
+	color: gray;
+ }
+ .edit-pos {
+	float: right;
+	margin-right: 10pt;
+ }
+ .post-content {
+	
+ }
+ .post-comment {
+	width: 70%;
+	border-style: solid;
+	border-width: 1px;
+	border-color: white;
+	background-color: white;
+	height: auto;
+	
+		
+ }
+
+ #comment-header {
+	width: 100%;
+	background: blue;
+	height: 100%;
+	margin-top: -8pt;
+ }
+</style>
 
 <!-- Modal for comment -->
 <div id="myModal" class="modal fade" tabindex="-1" role="dialog">
@@ -36,32 +121,85 @@
     </div><!-- /.modal-content -->
   </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
+
+<!-- Modal for newPost -->
+<div id="newPostModal" class="modal fade" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Write a New Post</h4>
+      </div>
+      <div class="modal-body">
+	<form>
+           <div class="form-group ">
+		<label><input class="form-control" type="text" id="new-post-title" placeholder="Post Title"></label>
+	   </div>
+	   <div class="form-group">
+	    	 <label><textarea id="post-content" class="form-control" placeholder="Write your amazing post here..."></textarea></label>
+	   </div>
+	</form>       
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="savePost">Post it!</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Modal for ediPost -->
+<div id="editPostModal" class="modal fade" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Write a New Post</h4>
+      </div>
+      <div class="modal-body">
+	<form>
+           <div class="form-group ">
+		<label><input class="form-control" type="text" id="edit-post-title" placeholder="Post Title"></label>
+	   </div>
+	   <div class="form-group">
+	    	 <label><textarea id="edit-post-content" class="form-control" placeholder="Write your amazing post here..."></textarea></label>
+	   </div>
+	</form>       
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="saveEdits">Save Editions</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
 <script>
  $(document).ready(function(){
 	$('.modal').on('show.bs.modal', function(e){  
-		var $trigger = $(e.relatedTarget);  /* relatedTarget event was based on a Stack Overflow question that follows:
-							* http://stackoverflow.com/questions/28335143/determine-which-button-opened-a-bootstrap-3-modal
-						    */
-		console.log($trigger.data('button'));
-		$('#saveComment').click(function(){
-			var content = $('#content').val();
-			console.log(content);
+		$('#savePost').click(function(){
+			var content = $('#post-content').val();
+			var title = $('#new-post-title').val();
+			console.log(title);
 			// $.ajax to send data to server
 		        $.ajax({
-				url: '/comment',
+				url: '/newpost',
 				type: 'POST',
 				dataType: 'json',
-				data: JSON.stringify({'post_id': $trigger.data('button'),
+				data: JSON.stringify({
+					'title': title,
 					'content': content
 					}),
 				success: function(response){
-	 setTimeout("location.reload(true);", 500);
+	 		console.log(response);
+setTimeout("location.reload(true);", 500);
 					window.location.href = '/'
-					console.log(response.responseText);				
+							
 				},
 				error: function(error){
-					setTimeout("location.reload(true);", 500); // verify why its going to error, even though the operation were sucessfull
-					console.log(error.responseText)				
+				 console.log(error.responseText);					
+setTimeout("location.reload(true);", 500); // verify why its going to error, even though the operation were sucessfull
+					console.log(error)				
 				}
 			}); 
 			// end of $.ajax post 
@@ -71,7 +209,133 @@
 	$('.modal').on('hidden.bs.modal', function() {
 	    $('#content').val('')
 	});
- 	
+ 
+// post
+/*
+	$('.modal').on('show.bs.modal', function(e){  
+			var $trigger = $(e.relatedTarget);  /* relatedTarget event was based on a Stack Overflow question that follows:
+								* http://stackoverflow.com/questions/28335143/determine-which-button-opened-a-bootstrap-3-modal
+							    *
+			console.log($trigger.data('button'));
+			$('#saveComment').click(function(){
+				var content = $('#content').val();
+				console.log(content);
+				// $.ajax to send data to server
+				$.ajax({
+					url: '/comment',
+					type: 'POST',
+					dataType: 'json',
+					data: JSON.stringify({'post_id': $trigger.data('button'),
+						'content': content
+						}),
+					success: function(response){
+		 setTimeout("location.reload(true);", 500);
+						window.location.href = '/'
+						console.log(response.responseText);				
+					},
+					error: function(error){
+						setTimeout("location.reload(true);", 500); // verify why its going to error, even though the operation were sucessfull
+						console.log(error.responseText)				
+					}
+				}); 
+				// end of $.ajax post 
+				$('#myModal').modal('hide');
+			});	
+		});
+		$('.modal').on('hidden.bs.modal', function() {
+		    $('#content').val('')
+		});
+*/
+
+/* function for updating post
+*/
+  $('.edit-pos').click(function(){
+	var id= $(this).data('id');
+	var creator= $(this).data('creator');
+	var user = $(this).data('user');
+	if(creator==user){
+		var title = $(this).data('title')
+		var content = $(this).data('content')
+		console.log(content, title)		
+		$('#edit-post-content').val(content);
+		$('#edit-post-title').val(title);
+		$('#editPostModal').modal('show'); 
+		$('#saveEdits').click(function(){
+			var content = $('#edit-post-content').val();
+			var title = $('#edit-post-title').val();
+			console.log(content);
+			// $.ajax to send data to server
+			$.ajax({
+				url: '/edit',
+				type: 'POST',
+				dataType: 'json',
+				data: JSON.stringify({'post_id': id, 'title': title,						'content': content
+			            		    }),
+				success: function(response){
+			 		setTimeout("location.reload(true);", 500);
+					window.location.href = '/'
+					console.log(response.responseText);				
+					},
+				error: function(error){
+					setTimeout("location.reload(true);", 500); // verify why its going to error, even though the operation were sucessfull
+					console.log(error.responseText)				
+					}
+				}); 
+					// end of $.ajax post 
+					$('#editPostModal').modal('hide');				
+			});
+
+	/* End of update post functios
+	*/
+         }
+	else{
+		console.log('this post is not yours, jerk!')
+	};
+   });
+	
+
+/* end of updating post function
+*/
+
+
+
+
+/* function for new comment
+*
+  $('.edit-pos').click(function(){
+	var id= $(this).data('id');
+	var creator= $(this).data('creator');
+	var user = $(this).data('user');
+	if(creator==user){
+		$('#editPostModal').modal('show'); 
+		$('#saveEdits').click(function(){
+			var content = $('#edit-post-content').val();
+			var title = $('#edit-post-title').val();
+			console.log(content);
+			// $.ajax to send data to server
+			$.ajax({
+				url: '/comment',
+				type: 'POST',
+				dataType: 'json',
+				data: JSON.stringify({'post_id': id, 'title': title,						'content': content
+			            		    }),
+				success: function(response){
+			 		setTimeout("location.reload(true);", 500);
+					window.location.href = '/'
+					console.log(response.responseText);				
+					},
+				error: function(error){
+					setTimeout("location.reload(true);", 500); // verify why its going to error, even though the operation were sucessfull
+					console.log(error.responseText)				
+					}
+				}); 
+					// end of $.ajax post 
+					$('#editPostModal').modal('hide');				
+			});
+
+/* End of update post functios
+*/	
+
  }); 
 </script>
 {% endblock %}
