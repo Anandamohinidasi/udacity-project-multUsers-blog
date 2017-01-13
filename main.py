@@ -8,8 +8,11 @@ import operator
 import time
 import json
 import re
+import hashlib, binascii
 
 from google.appengine.ext import db
+
+from Modules import Post, Users, Comments
 
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
@@ -30,7 +33,7 @@ class MainHandler(webapp2.RequestHandler):
         t = jinja_env.get_template(template)
         return t.render(params)
 
-        def render(self, template, **kw):
+    def render(self, template, **kw):
             self.write(self.render_str(template, **kw))
 
     """ generate an random salt """
@@ -42,7 +45,10 @@ class MainHandler(webapp2.RequestHandler):
         if not salt:  # this allows has_pass to be used for verification also
             salt = self.generate_salt()
             # if no salt gived, generate a new salt
-        return "%s|%s" % (salt, hmac.new('haribol', password+salt).hexdigest())
+        return "%s|%s" % (salt, binascii.hexlify(hashlib.pbkdf2_hmac('sha256',
+                                                                     'haribol',
+                                                                     password+salt,
+                                                                     100000)))
 
     """ method to check if user is already logged in """
     def check(self):
@@ -85,7 +91,7 @@ class MainHandler(webapp2.RequestHandler):
     """ method to logout user """
     def logout(self):
         self.set_cookie('user_id', '')
-        self.redirect('/signup')
+        self.redirect('/login')
 
     """ method to make user post """
     def post(self, id, post):
@@ -100,47 +106,10 @@ class MainHandler(webapp2.RequestHandler):
             return True
         return False
 
-"""
-Post class is a new identitie at Google App Engine Datastore
-"""
-
-
-class Post(db.Model):
-    title = db.StringProperty(required=True)
-    content = db.TextProperty(required=True)
-    created = db.DateTimeProperty(auto_now_add=True)
-    creator = db.ListProperty(item_type=str, required=True)
-    likes = db.IntegerProperty(default=0)
-    comments = db.ListProperty(item_type=str)
-
-
-"""
-Post class is a new identitie at Google App Engine Datastore
-"""
-
-
-class Users(db.Model):
-    name = db.StringProperty(required=True)
-    password = db.StringProperty(required=True)
-    email = db.EmailProperty()
-
-
-"""
-Comments class, where comments are stored
-"""
-
-
-class Comments(db.Model):
-    creator = db.StringProperty(required=True)
-    content = db.TextProperty(required=True)
-    post_id = db.StringProperty(required=True)
-    created = db.DateTimeProperty(auto_now_add=True)
-
 
 """
 main class for path '/'
 """
-
 
 class MainPage(MainHandler):
     def get(self):
@@ -152,13 +121,14 @@ class MainPage(MainHandler):
                 # used to retrieve an key for the entity
                 post = db.get(post_key)
                 if not self.check_user(post.creator):
-                    if post.likes:
-                        post.likes = post.likes + 1
+                    if check[0] in post.likes:
+                        self.redirect('/')
                     else:
-                        post.likes = 1
-                    post.put()
-                    time.sleep(0.1)
-                    self.redirect('/')
+                        post.likes.append(check[0])
+                        print post.likes			
+                        post.put()
+                        time.sleep(0.1)
+                        self.redirect('/')
                 else:
                     self.redirect('/')
             username = check[1]
@@ -177,7 +147,7 @@ class MainPage(MainHandler):
             self.render("blog.html", data={'posts': posts,
                         'comments': comment_list, 'username': username})
         else:
-            self.redirect('/signup')
+            self.redirect('/login')
 
 
 """
@@ -229,8 +199,8 @@ class RegisterHandler(MainHandler):
         # if one or more inputs are invalid resend the register
         # page to the user with the email(if present)
         # and the name firstly typed
-        if (exists or mismatch True or
-                username or !password or email == 'invalid'):
+        if (exists or mismatch or
+                username or (not password) or email == 'invalid'):
             self.render('register.html',
                         data={'username': self.request.get('username'),
                               'email': self.request.get('email'),
@@ -296,17 +266,20 @@ class NewPostHandler(MainHandler):
         if self.check():
             self.render('newpost.html')
         else:
-            self.redirect('/signup')
+            self.redirect('/login')
 
     def post(self):
-        data = json.loads(self.request.body)
-        title = data['title']
-        postdata = data['content']
-        user_id = self.check()
-        post = Post(title=title,
-                    content=postdata, creator=user_id)
-        post.put()
-        self.response.write('haribol, postou')
+        if self.check():
+            data = json.loads(self.request.body)
+            title = data['title']
+            postdata = data['content']
+            user_id = self.check()
+            post = Post(title=title,
+                        content=postdata, creator=user_id)
+            post.put()
+            self.response.write('haribol, postou')
+        else:
+            self.redirect('/login')
 
 
 """
@@ -328,23 +301,27 @@ class EditPost(MainHandler):
             else:
                 self.redirect('/')
         else:
-            self.redirect('/signup')
+            self.redirect('/login')
 
     def post(self):
-        data = json.loads(self.request.body)
-        title = data['title']
-        postdata = data['content']
-        user_id = self.check()
-        post_id = data['post_id']
-        # used to retrieve an key for the entity
-        post_key = db.Key.from_path('Post', int(post_id))
-        post = db.get(post_key)  # from the key, get the entity
-        post.title = title
-        post.content = postdata
-        post.creator = user_id
-        post.put()
-        self.response.write('edited sucessfully')
-
+        if self.check():
+            data = json.loads(self.request.body)
+            creator = data['creator']
+            if self.check_user(creator):                
+                title = data['title']
+                postdata = data['content']
+                user_id = self.check()
+                post_id = data['post_id']
+                # used to retrieve an key for the entity
+                post_key = db.Key.from_path('Post', int(post_id))
+                post = db.get(post_key)  # from the key, get the entity
+                post.title = title
+                post.content = postdata
+                post.creator = user_id
+                post.put()
+                self.response.write('edited sucessfully')
+        else:
+            self.redirect('/login')
 
 """
 class comment, is the /comment endpoint
