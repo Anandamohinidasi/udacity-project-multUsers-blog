@@ -14,8 +14,8 @@
 		 <p><span id="{{post.key().id()}}" class="error">You cant edit a post that's not yours</span></p>
 		 <h1 id="post-title" >{{post.title}}</h1>
 		 <pre class="small-margin post-content" >{{post.content}}</pre>
-		 <div class="small-margin"><strong>{{post.likes|length}}</strong><a href="/?post_id={{post.key().id()}}&like=True"> <span class="glyphicon glyphicon-thumbs-up"></span> LIKE</a>
-		 <a class="make-a-comment" data-id="{{post.key().id()}}" data-creator-id="{{post.creator[0]}}" data-creator="{{post.creator[1]}}" data-user="{{data.username}}"> <span class="glyphicon glyphicon-comment"></span>{{post.comments|length}} COMMENT</a><br></div>
+		 <div class="small-margin"><strong>{{post.likes|length}}</strong><a href="/?post_id={{post.key().id()}}&like=True"> <span class="glyphicon glyphicon-thumbs-up"></span> LIKE </a>
+		 <a class="make-a-comment" data-id="{{post.key().id()}}" data-creator-id="{{post.creator[0]}}" data-creator="{{post.creator[1]}}" data-user="{{data.username}}">  {{post.comments|length}} <span class="glyphicon glyphicon-comment"></span> COMMENT</a><br></div>
 		<p><span id="{{post.key().id()}}{{post.creator[1]}}" class="error">You can't comment you own post</span></p>
 		<div class="small-margin post-comment">
 		{% for comment in data.comments%}

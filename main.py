@@ -9,6 +9,7 @@ import time
 import json
 import re
 import hashlib, binascii
+import ast
 
 from google.appengine.ext import db
 
@@ -100,8 +101,8 @@ class MainHandler(webapp2.RequestHandler):
     """ method to check if the user triyng to edit the post
         is the same user who once created it """
     def check_user(self, creator_id):
-        ida = creator_id
-        oda = self.check()
+	ida = ast.literal_eval(creator_id)[0]
+        oda = self.check()[0]
         if str(ida) == str(oda):
             return True
         return False
@@ -304,22 +305,25 @@ class EditPost(MainHandler):
             self.redirect('/login')
 
     def post(self):
-        if self.check():
+	check = self.check()
+        if check:
             data = json.loads(self.request.body)
             creator = data['creator']
+	    print self.check_user(creator)
             if self.check_user(creator):                
                 title = data['title']
                 postdata = data['content']
-                user_id = self.check()
+                user_id = check
                 post_id = data['post_id']
                 # used to retrieve an key for the entity
                 post_key = db.Key.from_path('Post', int(post_id))
-                post = db.get(post_key)  # from the key, get the entity
-                post.title = title
-                post.content = postdata
-                post.creator = user_id
-                post.put()
-                self.response.write('edited sucessfully')
+		if post_key:
+                    post = db.get(post_key)  # from the key, get the entity
+                    post.title = title
+                    post.content = postdata
+                    post.creator = user_id
+                    post.put()
+                    self.response.write('edited sucessfully')
         else:
             self.redirect('/login')
 
